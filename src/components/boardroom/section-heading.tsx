@@ -12,11 +12,13 @@ export function SectionHeading({
   subtitle: string;
 }) {
   return (
-    <div className="mb-5">
-      <div className="text-gold text-xs uppercase tracking-[0.35em]">{eyebrow}</div>
-      <h2 className="font-display mt-1 text-3xl md:text-4xl">{title}</h2>
-      <div className="text-muted-foreground mt-1 text-sm">{subtitle}</div>
-      <div className="gold-divider mt-4 w-24" />
+    <div className="mb-6">
+      <div className="text-muted-foreground text-xs tracking-normal lowercase">{eyebrow}</div>
+      <h2 className="font-display mt-1 text-2xl md:text-3xl font-semibold tracking-tight text-black lowercase">
+        {title}
+      </h2>
+      <div className="text-muted-foreground mt-1.5 text-sm lowercase">{subtitle}</div>
+      <div className="border-t border-black/8 mt-4 w-full" />
     </div>
   );
 }
