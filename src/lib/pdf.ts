@@ -1,4 +1,5 @@
 import type { BoardDiscussion } from "@/routes/api/board";
+import { renderBriefingHtml, renderDecisionHtml } from "./pdf-templates";
 
 type Brief = {
   role: string;
@@ -7,52 +8,49 @@ type Brief = {
   keyMetrics?: Array<{ label: string; value: string }>;
 };
 
-async function postToPdfApi(payload: any, defaultFilename: string) {
-  try {
-    const res = await fetch("/api/pdf", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+/**
+ * Renders HTML into a hidden iframe and triggers native browser printing/PDF generation.
+ * This completely bypasses the need for server-side Puppeteer/Chromium, resolving
+ * compatibility and function size issues on serverless hosting (like Vercel).
+ */
+function printHtmlContent(html: string) {
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "none";
+  iframe.style.visibility = "hidden";
+  document.body.appendChild(iframe);
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(errText || `Server returned status ${res.status}`);
-    }
+  const doc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (doc) {
+    doc.open();
+    doc.write(html);
+    doc.close();
 
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = defaultFilename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("PDF generation failed:", error);
-    alert("Failed to generate PDF. Please try again.");
+    // Allow fonts and resources to resolve, then open print dialog
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        console.error("Print dialog failed:", err);
+      } finally {
+        // Safe cleanup time
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }
+    }, 500);
   }
 }
 
 export function downloadDecisionPdf(discussion: BoardDiscussion, company?: string) {
-  const filename = `boardroom-decision-${slug(discussion.decision.headline || discussion.question)}.pdf`;
-  postToPdfApi({ type: "decision", discussion, companyName: company }, filename);
+  const html = renderDecisionHtml(discussion, company);
+  printHtmlContent(html);
 }
 
 export function downloadBriefingPdf(brief: Brief, company?: string) {
-  const filename = `briefing-${brief.role.toLowerCase().replace(/\s+/g, "-")}.pdf`;
-  postToPdfApi({ type: "briefing", brief, companyName: company }, filename);
-}
-
-function slug(s: string) {
-  return (
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 60) || "report"
-  );
+  const html = renderBriefingHtml(brief, company);
+  printHtmlContent(html);
 }
