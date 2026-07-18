@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiBoardRouteImport } from './routes/api/board'
 import { Route as ApiBriefingRouteImport } from './routes/api/briefing'
 import { Route as ApiGeminiTestRouteImport } from './routes/api/gemini-test'
+import { Route as ApiPdfRouteImport } from './routes/api/pdf'
 import { Route as ApiSupabaseTestRouteImport } from './routes/api/supabase-test'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const ApiGeminiTestRoute = ApiGeminiTestRouteImport.update({
   path: '/api/gemini-test',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPdfRoute = ApiPdfRouteImport.update({
+  id: '/api/pdf',
+  path: '/api/pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSupabaseTestRoute = ApiSupabaseTestRouteImport.update({
   id: '/api/supabase-test',
   path: '/api/supabase-test',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/api/board': typeof ApiBoardRoute
   '/api/briefing': typeof ApiBriefingRoute
   '/api/gemini-test': typeof ApiGeminiTestRoute
+  '/api/pdf': typeof ApiPdfRoute
   '/api/supabase-test': typeof ApiSupabaseTestRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/api/board': typeof ApiBoardRoute
   '/api/briefing': typeof ApiBriefingRoute
   '/api/gemini-test': typeof ApiGeminiTestRoute
+  '/api/pdf': typeof ApiPdfRoute
   '/api/supabase-test': typeof ApiSupabaseTestRoute
 }
 export interface FileRoutesById {
@@ -61,6 +69,7 @@ export interface FileRoutesById {
   '/api/board': typeof ApiBoardRoute
   '/api/briefing': typeof ApiBriefingRoute
   '/api/gemini-test': typeof ApiGeminiTestRoute
+  '/api/pdf': typeof ApiPdfRoute
   '/api/supabase-test': typeof ApiSupabaseTestRoute
 }
 export interface FileRouteTypes {
@@ -70,6 +79,7 @@ export interface FileRouteTypes {
     | '/api/board'
     | '/api/briefing'
     | '/api/gemini-test'
+    | '/api/pdf'
     | '/api/supabase-test'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
     | '/api/board'
     | '/api/briefing'
     | '/api/gemini-test'
+    | '/api/pdf'
     | '/api/supabase-test'
   id:
     | '__root__'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
     | '/api/board'
     | '/api/briefing'
     | '/api/gemini-test'
+    | '/api/pdf'
     | '/api/supabase-test'
   fileRoutesById: FileRoutesById
 }
@@ -92,6 +104,7 @@ export interface RootRouteChildren {
   ApiBoardRoute: typeof ApiBoardRoute
   ApiBriefingRoute: typeof ApiBriefingRoute
   ApiGeminiTestRoute: typeof ApiGeminiTestRoute
+  ApiPdfRoute: typeof ApiPdfRoute
   ApiSupabaseTestRoute: typeof ApiSupabaseTestRoute
 }
 
@@ -125,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGeminiTestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pdf': {
+      id: '/api/pdf'
+      path: '/api/pdf'
+      fullPath: '/api/pdf'
+      preLoaderRoute: typeof ApiPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/supabase-test': {
       id: '/api/supabase-test'
       path: '/api/supabase-test'
@@ -140,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBoardRoute: ApiBoardRoute,
   ApiBriefingRoute: ApiBriefingRoute,
   ApiGeminiTestRoute: ApiGeminiTestRoute,
+  ApiPdfRoute: ApiPdfRoute,
   ApiSupabaseTestRoute: ApiSupabaseTestRoute,
 }
 export const routeTree = rootRouteImport
