@@ -97,7 +97,6 @@
     letter-spacing: -0.04em; /* Super tight headers */
     font-weight: 600;
     color: #000000;
-    text-transform: lowercase; /* Lowercase headings inspired by poetic.com */
   }
 }
 

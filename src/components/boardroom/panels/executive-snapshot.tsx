@@ -132,16 +132,16 @@ function HealthCard({ score }: { score: number }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="font-display text-3xl font-semibold">{score}</div>
-          <div className="text-muted-foreground text-[10px] lowercase">/ 100</div>
+          <div className="text-muted-foreground text-[10px]">/ 100</div>
         </div>
       </div>
       <div>
-        <div className="text-muted-foreground text-xs lowercase">business health</div>
+        <div className="text-muted-foreground text-xs">Business Health</div>
         <div className="font-display text-2xl" style={{ color }}>
           {status}
         </div>
-        <div className="text-muted-foreground mt-1 text-xs lowercase">
-          weighted across margin, cash, collections, inventory.
+        <div className="text-muted-foreground mt-1 text-xs">
+          Weighted across margin, cash, collections, inventory.
         </div>
       </div>
     </div>
@@ -163,11 +163,11 @@ function MetricStat({
 }) {
   return (
     <div>
-      <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs lowercase">
+      <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
         {icon} {label}
       </div>
       <div className="font-display text-xl font-semibold text-black">{value}</div>
-      <div className="text-xs lowercase" style={{ color: good ? "var(--success)" : "var(--warning)" }}>
+      <div className="text-xs" style={{ color: good ? "var(--success)" : "var(--warning)" }}>
         {sub}
       </div>
     </div>
@@ -192,8 +192,8 @@ function RevenueSpark({ business }: { business: BusinessData }) {
 
   return (
     <div className="panel md:col-span-2 p-5">
-      <div className="mb-2 text-muted-foreground text-xs lowercase">
-        revenue — last 6 months
+      <div className="mb-2 text-muted-foreground text-xs">
+        Revenue — Last 6 Months
       </div>
       <svg viewBox={`0 0 ${w} ${h}`} className="h-24 w-full">
         <polyline points={pts} fill="none" stroke="#000000" strokeWidth="2.5" />
@@ -203,7 +203,7 @@ function RevenueSpark({ business }: { business: BusinessData }) {
           return <circle key={i} cx={x} cy={y} r={3} fill="#000000" />;
         })}
       </svg>
-      <div className="text-muted-foreground mt-2 flex justify-between text-xs lowercase">
+      <div className="text-muted-foreground mt-2 flex justify-between text-xs">
         <span>
           {business.currency}
           {fmt(min)}
