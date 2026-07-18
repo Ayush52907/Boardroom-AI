@@ -12,17 +12,17 @@ interface HeroProps {
 export function Hero({ business, onAsk }: HeroProps) {
   return (
     <section className="mb-12 mt-4 text-center md:mt-8">
-      <div className="text-muted-foreground mb-4 inline-flex items-center gap-1.5 text-xs lowercase">
+      <div className="text-muted-foreground mb-4 inline-flex items-center gap-1.5 text-xs">
         <Sparkles className="h-3.5 w-3.5 text-black" />
-        your executive board is ready
+        Your Executive Board is Ready
       </div>
-      <h1 className="font-display text-4xl font-semibold tracking-tight leading-tight md:text-5xl text-black lowercase">
-        every sme deserves its own{" "}
+      <h1 className="font-display text-4xl font-semibold tracking-tight leading-tight md:text-5xl text-black">
+        Every SME deserves its own{" "}
         <span className="italic font-bold underline decoration-[1.5px] underline-offset-6">board of directors.</span>
       </h1>
-      <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-base md:text-lg leading-relaxed lowercase">
-        gemma's ai executives have already reviewed{" "}
-        <span className="text-black font-semibold">{business.companyName}</span>. they've debated the
+      <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-base md:text-lg leading-relaxed">
+        Gemma's AI executives have already reviewed{" "}
+        <span className="text-black font-semibold">{business.companyName}</span>. They've debated the
         numbers and are ready to recommend what to do next.
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
