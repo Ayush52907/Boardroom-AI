@@ -84,7 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Gemma Boardroom is an AI Board of Directors for SMEs. Get executive-level decisions, not just dashboards.",
       },
-      { name: "theme-color", content: "#1a1f36" },
+      { name: "theme-color", content: "#FDFBF7" },
       { property: "og:title", content: "Gemma Boardroom — Your AI Executive Team" },
       { property: "og:description", content: "An AI executive board that analyzes your business, debates the options, and recommends what to do next." },
       { property: "og:type", content: "website" },
@@ -95,7 +95,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap",
       },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },

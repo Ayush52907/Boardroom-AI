@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -42,42 +42,43 @@
   --color-chart-5: var(--chart-5);
 }
 
-/* Boardroom: deep midnight navy walls, warm brass accents, ivory typography. */
+/* Poetic: High-contrast minimalist Swiss cream-and-black theme. */
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.16 0.02 260);
-  --foreground: oklch(0.96 0.01 90);
-  --card: oklch(0.21 0.025 260);
-  --card-foreground: oklch(0.96 0.01 90);
-  --popover: oklch(0.19 0.025 260);
-  --popover-foreground: oklch(0.96 0.01 90);
-  --primary: oklch(0.78 0.14 82);
-  --primary-foreground: oklch(0.18 0.02 260);
-  --secondary: oklch(0.26 0.03 260);
-  --secondary-foreground: oklch(0.94 0.01 90);
-  --muted: oklch(0.24 0.02 260);
-  --muted-foreground: oklch(0.72 0.02 90);
-  --accent: oklch(0.32 0.05 260);
-  --accent-foreground: oklch(0.96 0.01 90);
-  --destructive: oklch(0.62 0.2 25);
-  --destructive-foreground: oklch(0.98 0.01 90);
-  --success: oklch(0.7 0.15 155);
-  --warning: oklch(0.78 0.16 70);
-  --gold: oklch(0.78 0.14 82);
-  --gold-foreground: oklch(0.18 0.02 260);
-  --border: oklch(0.3 0.02 260);
-  --input: oklch(0.28 0.02 260);
-  --ring: oklch(0.78 0.14 82);
-  --chart-1: oklch(0.78 0.14 82);
-  --chart-2: oklch(0.7 0.15 200);
-  --chart-3: oklch(0.7 0.15 155);
-  --chart-4: oklch(0.72 0.17 25);
-  --chart-5: oklch(0.68 0.16 300);
+  --background: #FDFBF7; /* Warm light cream */
+  --foreground: #000000; /* Pure black text */
+  --card: #FDFBF7;
+  --card-foreground: #000000;
+  --popover: #FDFBF7;
+  --popover-foreground: #000000;
+  --primary: #000000; /* Flat black */
+  --primary-foreground: #FDFBF7; /* Cream text */
+  --secondary: rgba(0, 0, 0, 0.06); /* Translucent black background */
+  --secondary-foreground: #000000;
+  --muted: rgba(0, 0, 0, 0.04);
+  --muted-foreground: #5A5A5A; /* Dark gray for secondary details */
+  --accent: rgba(0, 0, 0, 0.06);
+  --accent-foreground: #000000;
+  --destructive: oklch(0.55 0.18 20);
+  --destructive-foreground: #FDFBF7;
+  --success: oklch(0.6 0.12 140);
+  --warning: oklch(0.65 0.12 70);
+  --gold: #000000; /* Gold elements remapped to flat black */
+  --gold-foreground: #FDFBF7;
+  --border: rgba(0, 0, 0, 0.12); /* Thin light black borders */
+  --input: rgba(0, 0, 0, 0.08);
+  --ring: #000000;
+  --chart-1: #000000;
+  --chart-2: #3E3E3E;
+  --chart-3: #777777;
+  --chart-4: #B0B0B0;
+  --chart-5: #D8D8D8;
 }
 
+/* Force light mode variables, ignoring dark classes for a uniform light cream feel */
 .dark {
-  --background: oklch(0.16 0.02 260);
-  --foreground: oklch(0.96 0.01 90);
+  --background: #FDFBF7;
+  --foreground: #000000;
 }
 
 @layer base {
@@ -89,29 +90,147 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.025em; /* Tight letter spacing for Swiss typography */
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.04em; /* Super tight headers */
+    font-weight: 600;
+    color: #000000;
+    text-transform: lowercase; /* Lowercase headings inspired by poetic.com */
   }
 }
 
 @utility text-gold {
-  color: var(--gold);
+  color: #000000;
 }
+
+@utility text-gradient-purple {
+  color: #000000;
+}
+
 @utility bg-boardroom {
-  background:
-    radial-gradient(1200px 600px at 10% -10%, oklch(0.28 0.05 260 / 0.6), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, oklch(0.32 0.06 300 / 0.35), transparent 60%),
-    linear-gradient(180deg, oklch(0.14 0.02 260) 0%, oklch(0.18 0.025 260) 100%);
+  background: #FDFBF7; /* Flat warm cream canvas */
 }
+
 @utility panel {
-  background: linear-gradient(180deg, oklch(0.22 0.025 260) 0%, oklch(0.19 0.025 260) 100%);
-  border: 1px solid var(--border);
+  background: #FDFBF7;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: var(--radius-lg);
+  box-shadow: none; /* Flat design - no box shadows */
+  transition: all 0.2s ease-out;
+  position: relative;
+
+  &:hover {
+    border-color: rgba(0, 0, 0, 0.25);
+  }
 }
+
 @utility gold-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  opacity: 0.6;
+  background: rgba(0, 0, 0, 0.1);
+  opacity: 1;
+}
+
+/* Poetic.com Rounded Pill Button Styling */
+.bg-gold {
+  background: #000000 !important;
+  color: #FDFBF7 !important;
+  border: 1px solid #000000 !important;
+  font-weight: 500;
+  border-radius: 9999px !important; /* Rounded pill styling */
+  box-shadow: none !important;
+  transition: opacity 0.2s ease-out !important;
+}
+
+.bg-gold:hover {
+  opacity: 0.85 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.bg-gold:active {
+  transform: none !important;
+}
+
+/* Secondary outline / translucent buttons */
+button[class*="border-gold/40"], button[class*="border-primary"] {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #000000 !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  border-radius: 9999px !important;
+  transition: all 0.2s ease-out !important;
+  box-shadow: none !important;
+}
+
+button[class*="border-gold/40"]:hover, button[class*="border-primary"]:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.3) !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Poetic.com Tabs styling */
+div[role="tablist"] {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  padding: 4px !important;
+  border-radius: 9999px !important;
+}
+
+button[role="tab"] {
+  border-radius: 9999px !important;
+  transition: all 0.2s ease !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+button[role="tab"][data-state="active"] {
+  background: #000000 !important;
+  color: #FDFBF7 !important;
+  box-shadow: none !important;
+}
+
+/* Inputs, Textareas, Select elements */
+input, textarea, select {
+  background: #FDFBF7 !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 9999px !important; /* Pill style text inputs */
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+  transition: all 0.2s ease-out !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Customize sliders to match black accents */
+span[class*="bg-primary"] {
+  background: #000000 !important;
+}
+
+span[class*="border-primary"] {
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Clean minimal scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FDFBF7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }

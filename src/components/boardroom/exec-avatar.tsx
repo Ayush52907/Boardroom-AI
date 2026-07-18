@@ -9,10 +9,10 @@ export function ExecAvatar({ role, size = 40 }: { role: ExecRole; size?: number 
       style={{
         width: size,
         height: size,
-        background: `linear-gradient(135deg, ${e.color}, oklch(0.35 0.05 260))`,
-        color: "oklch(0.15 0.02 260)",
-        fontSize: size * 0.36,
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "rgba(0, 0, 0, 0.04)",
+        color: e.color,
+        fontSize: size * 0.38,
+        border: "1px solid rgba(0, 0, 0, 0.08)",
       }}
       title={`${e.name} — ${e.role}`}
     >

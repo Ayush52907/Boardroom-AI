@@ -107,7 +107,7 @@ function HealthCard({ score }: { score: number }) {
     score >= 75
       ? "var(--success)"
       : score >= 55
-        ? "var(--gold)"
+        ? "#000000"
         : score >= 35
           ? "var(--warning)"
           : "var(--destructive)";
@@ -118,7 +118,7 @@ function HealthCard({ score }: { score: number }) {
     <div className="panel flex items-center gap-5 p-5">
       <div className="relative h-28 w-28 shrink-0">
         <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
-          <circle cx="60" cy="60" r="46" strokeWidth="8" stroke="oklch(0.28 0.02 260)" fill="none" />
+          <circle cx="60" cy="60" r="46" strokeWidth="8" stroke="rgba(0,0,0,0.06)" fill="none" />
           <circle
             cx="60"
             cy="60"
@@ -131,17 +131,17 @@ function HealthCard({ score }: { score: number }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="font-display text-3xl">{score}</div>
-          <div className="text-muted-foreground text-[10px] uppercase tracking-widest">/ 100</div>
+          <div className="font-display text-3xl font-semibold">{score}</div>
+          <div className="text-muted-foreground text-[10px] lowercase">/ 100</div>
         </div>
       </div>
       <div>
-        <div className="text-muted-foreground text-xs uppercase tracking-widest">Business Health</div>
+        <div className="text-muted-foreground text-xs lowercase">business health</div>
         <div className="font-display text-2xl" style={{ color }}>
           {status}
         </div>
-        <div className="text-muted-foreground mt-1 text-xs">
-          Weighted across margin, cash, collections, inventory.
+        <div className="text-muted-foreground mt-1 text-xs lowercase">
+          weighted across margin, cash, collections, inventory.
         </div>
       </div>
     </div>
@@ -163,11 +163,11 @@ function MetricStat({
 }) {
   return (
     <div>
-      <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+      <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs lowercase">
         {icon} {label}
       </div>
-      <div className="font-display text-xl">{value}</div>
-      <div className="text-xs" style={{ color: good ? "var(--success)" : "var(--warning)" }}>
+      <div className="font-display text-xl font-semibold text-black">{value}</div>
+      <div className="text-xs lowercase" style={{ color: good ? "var(--success)" : "var(--warning)" }}>
         {sub}
       </div>
     </div>
@@ -192,18 +192,18 @@ function RevenueSpark({ business }: { business: BusinessData }) {
 
   return (
     <div className="panel md:col-span-2 p-5">
-      <div className="mb-2 text-muted-foreground text-xs uppercase tracking-widest">
-        Revenue — last 6 months
+      <div className="mb-2 text-muted-foreground text-xs lowercase">
+        revenue — last 6 months
       </div>
       <svg viewBox={`0 0 ${w} ${h}`} className="h-24 w-full">
-        <polyline points={pts} fill="none" stroke="var(--gold)" strokeWidth="2" />
+        <polyline points={pts} fill="none" stroke="#000000" strokeWidth="2.5" />
         {data.map((v, i) => {
           const x = pad + (i * (w - pad * 2)) / (data.length - 1);
           const y = h - pad - ((v - min) / range) * (h - pad * 2);
-          return <circle key={i} cx={x} cy={y} r={2.5} fill="var(--gold)" />;
+          return <circle key={i} cx={x} cy={y} r={3} fill="#000000" />;
         })}
       </svg>
-      <div className="text-muted-foreground mt-2 flex justify-between text-xs">
+      <div className="text-muted-foreground mt-2 flex justify-between text-xs lowercase">
         <span>
           {business.currency}
           {fmt(min)}
