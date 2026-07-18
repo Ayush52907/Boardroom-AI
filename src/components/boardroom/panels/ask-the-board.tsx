@@ -10,6 +10,8 @@ import { selectExecutives, type ExecRole } from "@/lib/executives";
 import { useAskBoard } from "@/hooks/use-board";
 import type { BoardDiscussion } from "@/routes/api/board";
 
+import type { BusinessContext } from "@/lib/business";
+
 const SUGGESTED = [
   "Why did profits decrease?",
   "Should we increase prices?",
@@ -19,10 +21,10 @@ const SUGGESTED = [
 ];
 
 interface AskTheBoardProps {
-  businessSummary: string;
+  businessContext: BusinessContext;
 }
 
-export function AskTheBoard({ businessSummary }: AskTheBoardProps) {
+export function AskTheBoard({ businessContext }: AskTheBoardProps) {
   const [question, setQuestion] = useState("");
   const [discussion, setDiscussion] = useState<BoardDiscussion | null>(null);
 
@@ -42,7 +44,7 @@ export function AskTheBoard({ businessSummary }: AskTheBoardProps) {
     setQuestion(query);
     setDiscussion(null);
     try {
-      const result = await mutateAsync({ question: query, businessSummary });
+      const result = await mutateAsync({ question: query, businessContext });
       setDiscussion(result);
     } catch {
       // Error already toasted by useAskBoard's onError
@@ -136,7 +138,7 @@ export function AskTheBoard({ businessSummary }: AskTheBoardProps) {
             </div>
             <DiscussionStream
               discussion={discussion}
-              companyName={businessSummary.split("\n")[0]?.replace(/^Company:\s*/, "")}
+              companyName={businessContext.financial.companyName}
             />
           </div>
         )}

@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { callGemini } from "@/lib/gemini.server";
-
+import { BusinessContextSchema } from "./board";
+import { getContextForExecutive } from "@/lib/business";
 
 const ROLES = ["CEO", "CFO", "COO", "CMO", "CTO", "Procurement Officer", "Business Analyst"] as const;
 
 const Req = z.object({
   role: z.enum(ROLES),
-  businessSummary: z.string().min(10).max(4000),
+  businessContext: BusinessContextSchema,
 });
 
 const FOCUS: Record<(typeof ROLES)[number], string> = {
@@ -33,6 +34,13 @@ export const Route = createFileRoute("/api/briefing")({
       POST: async ({ request }) => {
         try {
           const body = Req.parse(await request.json());
+          const roleContext = getContextForExecutive(body.role, body.businessContext);
+          const roleContextJson = JSON.stringify(roleContext);
+
+          console.log(`\n--- [EXECUTIVE BRIEFING SCOPED PAYLOAD] ${body.role} ---`);
+          console.log(`Scoped Payload Size: ${roleContextJson.length} chars`);
+          console.log(roleContextJson);
+
           const system = `You are Gemma, generating a ${body.role} briefing focused on: ${FOCUS[body.role]}.
 Return ONLY this JSON:
 {
@@ -47,7 +55,7 @@ Rules:
 - 4 to 6 keyMetrics reflecting the numbers most relevant to a ${body.role}.`;
           const raw = await callGemini({
             system,
-            user: `BUSINESS DATA:\n${body.businessSummary}\n\nGenerate the ${body.role} briefing now.`,
+            user: `ROLE-SCOPED BUSINESS DATA SLICE:\n${roleContextJson}\n\nGenerate the ${body.role} briefing now.`,
             json: true,
           });
           const parsed = (() => {

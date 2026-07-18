@@ -15,7 +15,7 @@ import {
   DEMO_BUSINESS,
   computeMetrics,
   computePriorities,
-  summarizeBusiness,
+  buildBusinessContext,
   type BusinessData,
 } from "@/lib/business";
 
@@ -65,7 +65,7 @@ function BoardroomPage() {
   // All derived values are pure computations — no AI, no network
   const metrics = useMemo(() => computeMetrics(business), [business]);
   const priorities = useMemo(() => computePriorities(business, metrics), [business, metrics]);
-  const businessSummary = useMemo(() => summarizeBusiness(business, metrics), [business, metrics]);
+  const businessContext = useMemo(() => buildBusinessContext(business, metrics), [business, metrics]);
 
   function handleLoadBusiness(b: BusinessData) {
     setBusiness(b);
@@ -106,12 +106,12 @@ function BoardroomPage() {
         />
 
         <div ref={boardRef}>
-          <AskTheBoard businessSummary={businessSummary} />
+          <AskTheBoard businessContext={businessContext} />
         </div>
 
-        <SimulatorPanel business={business} businessSummary={businessSummary} />
+        <SimulatorPanel business={business} businessContext={businessContext} />
 
-        <BriefingsPanel businessSummary={businessSummary} companyName={business.companyName} />
+        <BriefingsPanel businessContext={businessContext} companyName={business.companyName} />
 
         <Footer />
       </main>

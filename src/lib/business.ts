@@ -1,4 +1,4 @@
-// Business data types + deterministic calculations.
+// Business data types + deterministic calculations + structured context builder.
 
 export type BusinessData = {
   companyName: string;
@@ -123,13 +123,12 @@ export function runSimulation(b: BusinessData, sim: SimulationInput): Simulation
   switch (sim.kind) {
     case "price_change": {
       const pct = sim.pctChange / 100;
-      const orderChange = pct * b.priceElasticity; // e.g. +8% price × -0.55 = -4.4% orders
+      const orderChange = pct * b.priceElasticity;
       const newOrders = b.monthlyOrders * (1 + orderChange);
       const newAOV = b.avgOrderValue * (1 + pct);
       next.monthlyOrders = newOrders;
       next.avgOrderValue = newAOV;
       next.monthlyRevenue = newOrders * newAOV;
-      // COGS ratio drops because prices went up but cost per unit is stable
       next.cogsRatio = b.cogsRatio / (1 + pct);
       label = `Increase prices by ${sim.pctChange}%`;
       narrativeInputs = {
@@ -157,7 +156,6 @@ export function runSimulation(b: BusinessData, sim: SimulationInput): Simulation
     case "switch_supplier": {
       const s = b.suppliers.find((x) => x.name === sim.toSupplier) ?? b.suppliers[0];
       next.cogsRatio = b.cogsRatio * s.costIndex;
-      // reliability affects effective revenue (stockouts)
       const reliabilityDelta = s.reliability - avg(b.suppliers.map((x) => x.reliability));
       next.monthlyRevenue = b.monthlyRevenue * (1 + reliabilityDelta * 0.15);
       label = `Switch primary supplier to ${s.name}`;
@@ -192,7 +190,7 @@ export function computePriorities(b: BusinessData, m: Metrics): Array<{
   if (totalOverdue > 0) {
     items.push({
       title: `Recover ${b.currency}${fmt(totalOverdue)} from overdue invoices`,
-      detail: `${b.overdueInvoices.length} accounts overdue; top: ${b.overdueInvoices[0].customer} (${b.overdueInvoices[0].daysOverdue}d).`,
+      detail: `${b.overdueInvoices.length} accounts overdue; top: ${b.overdueInvoices[0]?.customer || "Account"} (${b.overdueInvoices[0]?.daysOverdue || 0}d).`,
       severity: totalOverdue > b.monthlyRevenue * 0.3 ? "high" : "medium",
     });
   }
@@ -221,6 +219,286 @@ export function computePriorities(b: BusinessData, m: Metrics): Array<{
   return items.slice(0, 4);
 }
 
+// ---------------------------------------------------------------------------
+// Structured Business Context Architecture (Phase - Structured Context)
+// ---------------------------------------------------------------------------
+
+export type SupplierSummaryItem = {
+  name: string;
+  reliability: number;
+  costIndex: number;
+  isFlagged?: boolean;
+};
+
+export type CustomerSummaryItem = {
+  customer: string;
+  amount: number;
+  daysOverdue: number;
+  isHighRisk?: boolean;
+};
+
+export type BusinessContext = {
+  financial: {
+    companyName: string;
+    industry: string;
+    currency: string;
+    monthlyRevenue: number;
+    revenueTrend: number[];
+    revenueGrowthPct: number;
+    cogsRatioPct: number;
+    grossMarginPct: number;
+    fixedCosts: number;
+    operatingProfit: number;
+    netMarginPct: number;
+    cashReserves: number;
+    cashFlowScore: number;
+    outstandingInvoicesTotal: number;
+    collectionsScore: number;
+    healthScore: number;
+  };
+  operations: {
+    monthlyOrders: number;
+    avgOrderValue: number;
+    inventoryValue: number;
+    inventoryScore: number;
+    fixedCosts: number;
+    cogsRatioPct: number;
+  };
+  suppliers: {
+    totalCount: number;
+    avgReliabilityPct: number;
+    avgCostIndexPct: number;
+    topSuppliers: SupplierSummaryItem[];
+    flaggedSuppliers: SupplierSummaryItem[];
+    otherSuppliersCount: number;
+  };
+  customers: {
+    monthlyOrders: number;
+    avgOrderValue: number;
+    priceElasticity: number;
+    totalOverdueAmount: number;
+    overdueCount: number;
+    topOverdueInvoices: CustomerSummaryItem[];
+    highRiskCount: number;
+    otherOverdueAmount: number;
+  };
+  strategic: {
+    healthScore: number;
+    priorities: Array<{ title: string; detail: string; severity: "high" | "medium" | "low" }>;
+  };
+};
+
+/**
+ * Builds a structured, compact BusinessContext object deterministically.
+ * Aggregates large lists (suppliers, overdue invoices) into top items + summary stats.
+ */
+export function buildBusinessContext(b: BusinessData, m: Metrics): BusinessContext {
+  const priorities = computePriorities(b, m);
+
+  // Process & aggregate Suppliers (Top 5 + Flagged + Summary stats)
+  const totalSuppliers = b.suppliers.length;
+  const avgReliability = avg(b.suppliers.map((s) => s.reliability));
+  const avgCostIndex = avg(b.suppliers.map((s) => s.costIndex));
+
+  const topSuppliers: SupplierSummaryItem[] = b.suppliers.slice(0, 5).map((s) => ({
+    name: s.name,
+    reliability: +(s.reliability * 100).toFixed(0),
+    costIndex: +(s.costIndex * 100).toFixed(0),
+    isFlagged: s.reliability < 0.75,
+  }));
+
+  const flaggedSuppliers: SupplierSummaryItem[] = b.suppliers
+    .filter((s) => s.reliability < 0.75)
+    .map((s) => ({
+      name: s.name,
+      reliability: +(s.reliability * 100).toFixed(0),
+      costIndex: +(s.costIndex * 100).toFixed(0),
+      isFlagged: true,
+    }));
+
+  const otherSuppliersCount = Math.max(0, totalSuppliers - topSuppliers.length);
+
+  // Process & aggregate Overdue Invoices / AR (Top 5 + High risk + Summary stats)
+  const sortedInvoices = [...b.overdueInvoices].sort((a, b) => b.amount - a.amount);
+  const totalOverdueAmount = b.outstandingInvoices;
+  const overdueCount = b.overdueInvoices.length;
+
+  const topOverdueInvoices: CustomerSummaryItem[] = sortedInvoices.slice(0, 5).map((i) => ({
+    customer: i.customer,
+    amount: i.amount,
+    daysOverdue: i.daysOverdue,
+    isHighRisk: i.daysOverdue > 30,
+  }));
+
+  const highRiskCount = b.overdueInvoices.filter((i) => i.daysOverdue > 30).length;
+  const topInvoicesSum = topOverdueInvoices.reduce((s, i) => s + i.amount, 0);
+  const otherOverdueAmount = Math.max(0, totalOverdueAmount - topInvoicesSum);
+
+  return {
+    financial: {
+      companyName: b.companyName,
+      industry: b.industry,
+      currency: b.currency,
+      monthlyRevenue: m.revenue,
+      revenueTrend: b.revenueTrend,
+      revenueGrowthPct: +m.revenueGrowth.toFixed(1),
+      cogsRatioPct: +(b.cogsRatio * 100).toFixed(1),
+      grossMarginPct: +(m.grossMargin * 100).toFixed(1),
+      fixedCosts: b.fixedCosts,
+      operatingProfit: m.operatingProfit,
+      netMarginPct: +(m.netMargin * 100).toFixed(1),
+      cashReserves: b.cashReserves,
+      cashFlowScore: m.cashFlowScore,
+      outstandingInvoicesTotal: b.outstandingInvoices,
+      collectionsScore: m.collectionsScore,
+      healthScore: m.healthScore,
+    },
+    operations: {
+      monthlyOrders: b.monthlyOrders,
+      avgOrderValue: b.avgOrderValue,
+      inventoryValue: b.inventoryValue,
+      inventoryScore: m.inventoryScore,
+      fixedCosts: b.fixedCosts,
+      cogsRatioPct: +(b.cogsRatio * 100).toFixed(1),
+    },
+    suppliers: {
+      totalCount: totalSuppliers,
+      avgReliabilityPct: +(avgReliability * 100).toFixed(0),
+      avgCostIndexPct: +(avgCostIndex * 100).toFixed(0),
+      topSuppliers,
+      flaggedSuppliers,
+      otherSuppliersCount,
+    },
+    customers: {
+      monthlyOrders: b.monthlyOrders,
+      avgOrderValue: b.avgOrderValue,
+      priceElasticity: b.priceElasticity,
+      totalOverdueAmount,
+      overdueCount,
+      topOverdueInvoices,
+      highRiskCount,
+      otherOverdueAmount,
+    },
+    strategic: {
+      healthScore: m.healthScore,
+      priorities,
+    },
+  };
+}
+
+/**
+ * Role-scoped context selector. Gives each executive only the slice of data relevant to their role.
+ */
+export function getContextForExecutive(
+  role: string,
+  context: BusinessContext,
+  question: string = "",
+): Record<string, unknown> {
+  const isPricingRelated = /price|pricing|cost|elasticity|margin|discount/i.test(question);
+
+  switch (role) {
+    case "CFO": {
+      const slice: Record<string, unknown> = {
+        financial: context.financial,
+        collections: {
+          totalOverdue: context.customers.totalOverdueAmount,
+          overdueCount: context.customers.overdueCount,
+          topOverdueInvoices: context.customers.topOverdueInvoices,
+          highRiskCount: context.customers.highRiskCount,
+        },
+      };
+      if (isPricingRelated) {
+        slice.pricingFactors = {
+          priceElasticity: context.customers.priceElasticity,
+          avgOrderValue: context.customers.avgOrderValue,
+          cogsRatioPct: context.financial.cogsRatioPct,
+        };
+      }
+      return slice;
+    }
+
+    case "CMO":
+    case "Marketing Director": {
+      return {
+        customers: context.customers,
+        revenueTrend: context.financial.revenueTrend,
+        monthlyRevenue: context.financial.monthlyRevenue,
+        revenueGrowthPct: context.financial.revenueGrowthPct,
+        currency: context.financial.currency,
+      };
+    }
+
+    case "COO":
+    case "Operations Head": {
+      return {
+        operations: context.operations,
+        suppliersSummary: {
+          totalCount: context.suppliers.totalCount,
+          avgReliabilityPct: context.suppliers.avgReliabilityPct,
+          flaggedSuppliers: context.suppliers.flaggedSuppliers,
+        },
+        healthScore: context.financial.healthScore,
+      };
+    }
+
+    case "Procurement Officer":
+    case "Procurement Advisor": {
+      return {
+        suppliers: context.suppliers,
+        inventory: {
+          inventoryValue: context.operations.inventoryValue,
+          inventoryScore: context.operations.inventoryScore,
+          cogsRatioPct: context.operations.cogsRatioPct,
+        },
+        currency: context.financial.currency,
+      };
+    }
+
+    case "CTO": {
+      return {
+        operations: context.operations,
+        financialOverview: {
+          monthlyRevenue: context.financial.monthlyRevenue,
+          fixedCosts: context.financial.fixedCosts,
+        },
+        strategic: context.strategic,
+      };
+    }
+
+    case "Business Analyst":
+    case "CEO":
+    default: {
+      // CEO / Analyst decision maker gets compact synthesis of key indicators
+      return {
+        company: context.financial.companyName,
+        industry: context.financial.industry,
+        currency: context.financial.currency,
+        financialOverview: {
+          monthlyRevenue: context.financial.monthlyRevenue,
+          operatingProfit: context.financial.operatingProfit,
+          netMarginPct: context.financial.netMarginPct,
+          cashReserves: context.financial.cashReserves,
+          healthScore: context.financial.healthScore,
+        },
+        operationsOverview: {
+          inventoryScore: context.operations.inventoryScore,
+          avgOrderValue: context.operations.avgOrderValue,
+        },
+        suppliersOverview: {
+          totalCount: context.suppliers.totalCount,
+          avgReliabilityPct: context.suppliers.avgReliabilityPct,
+          flaggedCount: context.suppliers.flaggedSuppliers.length,
+        },
+        customersOverview: {
+          totalOverdueAmount: context.customers.totalOverdueAmount,
+          highRiskCount: context.customers.highRiskCount,
+        },
+        strategicPriorities: context.strategic.priorities,
+      };
+    }
+  }
+}
+
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
@@ -235,26 +513,4 @@ export function fmt(n: number): string {
 }
 export function fmtSigned(n: number): string {
   return (n >= 0 ? "+" : "") + fmt(n);
-}
-
-/**
- * Serializes BusinessData + computed Metrics into a plain-text business summary
- * for injection into LLM prompts. Pure function — no AI calls.
- */
-export function summarizeBusiness(b: BusinessData, m: Metrics): string {
-  return [
-    `Company: ${b.companyName} (${b.industry})`,
-    `Currency: ${b.currency}`,
-    `Monthly revenue: ${b.currency}${fmt(m.revenue)} (last 6 months trend: ${b.revenueTrend.map((x) => b.currency + fmt(x)).join(", ")})`,
-    `Revenue growth vs prior month: ${m.revenueGrowth.toFixed(1)}%`,
-    `COGS ratio: ${(b.cogsRatio * 100).toFixed(1)}% | Gross margin: ${(m.grossMargin * 100).toFixed(1)}%`,
-    `Fixed costs/mo: ${b.currency}${fmt(b.fixedCosts)} | Operating profit: ${b.currency}${fmt(m.operatingProfit)} | Net margin: ${(m.netMargin * 100).toFixed(1)}%`,
-    `Cash reserves: ${b.currency}${fmt(b.cashReserves)} | Cash score: ${m.cashFlowScore}/100`,
-    `Outstanding AR: ${b.currency}${fmt(b.outstandingInvoices)} | Collections score: ${m.collectionsScore}/100`,
-    `Inventory value: ${b.currency}${fmt(b.inventoryValue)} | Inventory score: ${m.inventoryScore}/100`,
-    `Avg order value: ${b.currency}${fmt(b.avgOrderValue)} | Monthly orders: ${b.monthlyOrders} | Price elasticity: ${b.priceElasticity}`,
-    `Suppliers: ${b.suppliers.map((s) => `${s.name} (reliability ${(s.reliability * 100).toFixed(0)}%, cost ${(s.costIndex * 100).toFixed(0)}%)`).join("; ")}`,
-    `Overdue invoices: ${b.overdueInvoices.map((i) => `${i.customer} ${b.currency}${fmt(i.amount)} (${i.daysOverdue}d)`).join("; ")}`,
-    `Overall business health: ${m.healthScore}/100`,
-  ].join("\n");
 }

@@ -2,11 +2,94 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { callGemini } from "@/lib/gemini.server";
 import { EXECUTIVES, selectExecutives, type ExecRole } from "@/lib/executives";
+import { getContextForExecutive, type BusinessContext } from "@/lib/business";
 
+// ---------------------------------------------------------------------------
+// Step 5: Structured BusinessContext Zod Schema with ~6000 Char Ceiling Safety Net
+// ---------------------------------------------------------------------------
+
+const FinancialContextSchema = z.object({
+  companyName: z.string(),
+  industry: z.string(),
+  currency: z.string(),
+  monthlyRevenue: z.number(),
+  revenueTrend: z.array(z.number()),
+  revenueGrowthPct: z.number(),
+  cogsRatioPct: z.number(),
+  grossMarginPct: z.number(),
+  fixedCosts: z.number(),
+  operatingProfit: z.number(),
+  netMarginPct: z.number(),
+  cashReserves: z.number(),
+  cashFlowScore: z.number(),
+  outstandingInvoicesTotal: z.number(),
+  collectionsScore: z.number(),
+  healthScore: z.number(),
+});
+
+const OperationsContextSchema = z.object({
+  monthlyOrders: z.number(),
+  avgOrderValue: z.number(),
+  inventoryValue: z.number(),
+  inventoryScore: z.number(),
+  fixedCosts: z.number(),
+  cogsRatioPct: z.number(),
+});
+
+const SupplierSummarySchema = z.object({
+  name: z.string(),
+  reliability: z.number(),
+  costIndex: z.number(),
+  isFlagged: z.boolean().optional(),
+});
+
+const SuppliersContextSchema = z.object({
+  totalCount: z.number(),
+  avgReliabilityPct: z.number(),
+  avgCostIndexPct: z.number(),
+  topSuppliers: z.array(SupplierSummarySchema),
+  flaggedSuppliers: z.array(SupplierSummarySchema),
+  otherSuppliersCount: z.number(),
+});
+
+const CustomerSummarySchema = z.object({
+  customer: z.string(),
+  amount: z.number(),
+  daysOverdue: z.number(),
+  isHighRisk: z.boolean().optional(),
+});
+
+const CustomersContextSchema = z.object({
+  monthlyOrders: z.number(),
+  avgOrderValue: z.number(),
+  priceElasticity: z.number(),
+  totalOverdueAmount: z.number(),
+  overdueCount: z.number(),
+  topOverdueInvoices: z.array(CustomerSummarySchema),
+  highRiskCount: z.number(),
+  otherOverdueAmount: z.number(),
+});
+
+const StrategicContextSchema = z.object({
+  healthScore: z.number(),
+  priorities: z.array(z.object({ title: z.string(), detail: z.string(), severity: z.enum(["high", "medium", "low"]) })),
+});
+
+export const BusinessContextSchema = z
+  .object({
+    financial: FinancialContextSchema,
+    operations: OperationsContextSchema,
+    suppliers: SuppliersContextSchema,
+    customers: CustomersContextSchema,
+    strategic: StrategicContextSchema,
+  })
+  .refine((ctx) => JSON.stringify(ctx).length <= 6000, {
+    message: "BusinessContext JSON serialized size exceeds 6000 characters ceiling.",
+  });
 
 const RequestSchema = z.object({
   question: z.string().min(3).max(500),
-  businessSummary: z.string().min(10).max(4000),
+  businessContext: BusinessContextSchema,
   simulation: z
     .object({ label: z.string(), before: z.record(z.any()), after: z.record(z.any()), narrativeInputs: z.record(z.any()) })
     .optional(),
@@ -60,9 +143,23 @@ async function generateDiscussion(
   body: z.infer<typeof RequestSchema>,
   participants: ExecRole[],
 ): Promise<BoardDiscussion> {
-  const execProfiles = participants
-    .map((r) => `- ${r} (${EXECUTIVES[r].name}): ${EXECUTIVES[r].focus}`)
-    .join("\n");
+  const allRoles: Array<ExecRole | "Business Analyst"> = [...participants, "Business Analyst"];
+
+  console.log("\n=======================================================");
+  console.log(`[BOARD MEETING CONVENED] Question: "${body.question}"`);
+  console.log("=======================================================");
+
+  // Step 3 & 6: Log what each executive receives as their role-scoped context slice
+  const scopedDataBlock = allRoles
+    .map((role) => {
+      const slice = getContextForExecutive(role, body.businessContext, body.question);
+      const sliceJson = JSON.stringify(slice);
+      console.log(`\n--- [EXECUTIVE ROLE SCOPE] ${role} (${EXECUTIVES[role as ExecRole]?.name || "Vikram Rao"}) ---`);
+      console.log(`Scoped Payload Size: ${sliceJson.length} chars`);
+      console.log(sliceJson);
+      return `- ${role} (${EXECUTIVES[role as ExecRole]?.name || "Vikram Rao"}) SCOPED DATA SLICE:\n  ${sliceJson}`;
+    })
+    .join("\n\n");
 
   const simBlock = body.simulation
     ? `\n\nSIMULATION RESULTS (deterministic — do NOT re-calculate, only interpret):\nDecision: ${body.simulation.label}\nBefore: ${JSON.stringify(body.simulation.before)}\nAfter: ${JSON.stringify(body.simulation.after)}\nAssumptions: ${JSON.stringify(body.simulation.narrativeInputs)}\n`
@@ -87,16 +184,12 @@ Return ONLY this JSON schema, no prose:
 }
 
 Discussion rules:
-- Round 1: each participant analyses INDEPENDENTLY. Exactly one entry per participant in the order: ${rolesList}. 3-5 bullets each. Every bullet is one sentence, plain English, cites a specific number from the data where relevant.
+- Round 1: each participant analyses INDEPENDENTLY using ONLY their assigned scoped data slice. Exactly one entry per participant in the order: ${rolesList}. 3-5 bullets each. Every bullet is one sentence, plain English, cites a specific number from the data where relevant.
 - Round 2: each participant RESPONDS to the others — challenge, agree with a caveat, or refine. Same order, one entry per participant, 3-5 bullets each. Do NOT repeat round 1.
-- Decision: the Business Analyst (Vikram Rao) is the sole decision maker. He does NOT summarise — he decides. The recommendation must be ONE unambiguous action. Every rationale/impact/risk bullet MUST reference a concrete figure from the business data (currency amounts, %, ratios, counts). nextActions must contain 3-5 items with owner, timeline and a measurable metric.
-- No filler ("looks good", "we should consider"). Be direct and specific.
+- Decision: the Business Analyst (Vikram Rao) is the sole decision maker. He does NOT summarise — he decides. The recommendation must be ONE unambiguous action. Every rationale/impact/risk bullet MUST reference a concrete figure from the provided business data (currency amounts, %, ratios, counts). nextActions must contain 3-5 items with owner, timeline and a measurable metric.
+- No filler ("looks good", "we should consider"). Be direct and specific.`;
 
-PARTICIPANTS:
-${execProfiles}
-- Business Analyst (Vikram Rao): final decision maker. Must ground every claim in the numbers provided.`;
-
-  const user = `BUSINESS DATA:\n${body.businessSummary}${simBlock}\n\nQUESTION FROM OWNER:\n"${body.question}"\n\nReturn the JSON now.`;
+  const user = `ROLE-SCOPED BUSINESS DATA SLICES:\n${scopedDataBlock}${simBlock}\n\nQUESTION FROM OWNER:\n"${body.question}"\n\nReturn the JSON now.`;
 
   const raw = await callGemini({ system, user, json: true });
   const parsed = safeParse(raw);

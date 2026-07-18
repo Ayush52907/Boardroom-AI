@@ -1,10 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BoardDiscussion } from "@/routes/api/board";
+import type { BusinessContext } from "@/lib/business";
 
 export interface AskBoardParams {
   question: string;
-  businessSummary: string;
+  businessContext: BusinessContext;
   simulation?: {
     label: string;
     before: Record<string, number>;
@@ -28,7 +29,7 @@ export function useAskBoard() {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(text.slice(0, 200) || "Board unavailable");
+        throw new Error(text.slice(0, 300) || "Board unavailable");
       }
       const data = (await res.json()) as BoardDiscussion;
       if (!data.messages || data.messages.length === 0) {

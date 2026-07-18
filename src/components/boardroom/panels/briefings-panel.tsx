@@ -7,6 +7,8 @@ import { downloadBriefingPdf } from "@/lib/pdf";
 import { useGenerateBriefing } from "@/hooks/use-briefing";
 import type { Brief } from "@/routes/api/briefing";
 
+import type { BusinessContext } from "@/lib/business";
+
 type BriefRole = "CEO" | "CFO" | "COO" | "CMO" | "CTO" | "Procurement Officer" | "Business Analyst";
 
 const BRIEF_ROLES: BriefRole[] = [
@@ -20,11 +22,11 @@ const BRIEF_ROLES: BriefRole[] = [
 ];
 
 interface BriefingsPanelProps {
-  businessSummary: string;
+  businessContext: BusinessContext;
   companyName: string;
 }
 
-export function BriefingsPanel({ businessSummary, companyName }: BriefingsPanelProps) {
+export function BriefingsPanel({ businessContext, companyName }: BriefingsPanelProps) {
   const [activeRole, setActiveRole] = useState<string>("CEO");
   const [briefs, setBriefs] = useState<Record<string, Brief>>({});
   const [loadingRole, setLoadingRole] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function BriefingsPanel({ businessSummary, companyName }: BriefingsPanelP
   async function generate(role: string) {
     setLoadingRole(role);
     try {
-      const result = await mutateAsync({ role, businessSummary });
+      const result = await mutateAsync({ role, businessContext });
       setBriefs((prev) => ({ ...prev, [role]: result }));
     } catch {
       // Error already toasted by useGenerateBriefing's onError

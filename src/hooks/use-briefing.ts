@@ -1,10 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Brief } from "@/routes/api/briefing";
+import type { BusinessContext } from "@/lib/business";
 
 export interface GenerateBriefingParams {
   role: string;
-  businessSummary: string;
+  businessContext: BusinessContext;
 }
 
 /**
@@ -22,7 +23,7 @@ export function useGenerateBriefing() {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(text.slice(0, 200) || "Briefing failed");
+        throw new Error(text.slice(0, 300) || "Briefing failed");
       }
       return res.json() as Promise<Brief>;
     },

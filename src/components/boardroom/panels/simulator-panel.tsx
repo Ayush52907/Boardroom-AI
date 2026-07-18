@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { SectionHeading } from "@/components/boardroom/section-heading";
 import { DiscussionStream } from "@/components/boardroom/discussion-stream";
-import { fmt, fmtSigned, runSimulation, type BusinessData, type SimulationInput } from "@/lib/business";
+import { fmt, fmtSigned, runSimulation, type BusinessData, type BusinessContext, type SimulationInput } from "@/lib/business";
 import { useAskBoard } from "@/hooks/use-board";
 import type { BoardDiscussion } from "@/routes/api/board";
 
@@ -12,10 +12,10 @@ type SimKind = "price_change" | "hire_employee" | "marketing_spend" | "switch_su
 
 interface SimulatorPanelProps {
   business: BusinessData;
-  businessSummary: string;
+  businessContext: BusinessContext;
 }
 
-export function SimulatorPanel({ business, businessSummary }: SimulatorPanelProps) {
+export function SimulatorPanel({ business, businessContext }: SimulatorPanelProps) {
   const [kind, setKind] = useState<SimKind>("price_change");
   const [pctChange, setPctChange] = useState(5);
   const [hireCost, setHireCost] = useState(45000);
@@ -51,7 +51,7 @@ export function SimulatorPanel({ business, businessSummary }: SimulatorPanelProp
     try {
       const result = await mutateAsync({
         question: `Board, interpret this simulation: "${sim.label}". Discuss whether we should proceed.`,
-        businessSummary,
+        businessContext,
         simulation: {
           label: sim.label,
           before: {

@@ -41,7 +41,7 @@ export type GeminiCallOpts = {
 };
 
 // ---------------------------------------------------------------------------
-// Rate Limiter & Response Cache (Dev Safety)
+// High-Performance Spaced-Dispatch Rate Limiter & Response Cache
 // ---------------------------------------------------------------------------
 
 // Simple in-memory response cache
@@ -50,8 +50,8 @@ const responseCache = new Map<string, string>();
 // Track timestamps of actual API calls within the sliding window
 const requestTimestamps: number[] = [];
 
-// Lock/semaphore to ensure queue execution is processed strictly in order
-let queuePromise = Promise.resolve();
+// Dispatch queue chain — only serializes dispatch clearance (not network execution)
+let dispatchQueuePromise = Promise.resolve();
 
 function getCachedResponseKey(opts: GeminiCallOpts, modelId: string): string {
   return JSON.stringify({
@@ -67,35 +67,47 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Enforces rate limit by spacing out requests if the sliding window is full.
+ * Rapid dispatch rate-limiter:
+ * Allows fast concurrent network calls while guaranteeing we don't exceed GEMINI_MAX_RPM (default 30).
+ * Spaces out dispatches by a tiny interval (min 200ms) so requests don't hit Google as a single burst.
  */
-async function enforceRateLimit() {
+async function acquireDispatchPermission() {
   const limitRPM = parseInt(process.env.GEMINI_MAX_RPM || "30", 10);
   const windowMs = 60000;
+  // Minimum spacing between dispatching requests (e.g. 30 RPM = 2000ms, set to 200ms for smooth bursts under limit)
+  const minDispatchSpacingMs = Math.max(150, Math.floor(windowMs / limitRPM / 2));
 
   while (true) {
     const now = Date.now();
-    // Remove timestamps older than the sliding window
+
+    // Clean up timestamps older than 60s
     while (requestTimestamps.length > 0 && requestTimestamps[0] <= now - windowMs) {
       requestTimestamps.shift();
     }
 
     if (requestTimestamps.length < limitRPM) {
-      // Under limit, we can proceed
-      requestTimestamps.push(now);
+      const lastDispatchTime = requestTimestamps[requestTimestamps.length - 1] || 0;
+      const timeSinceLastDispatch = now - lastDispatchTime;
+
+      if (timeSinceLastDispatch < minDispatchSpacingMs) {
+        await delay(minDispatchSpacingMs - timeSinceLastDispatch);
+        continue;
+      }
+
+      requestTimestamps.push(Date.now());
       break;
     }
 
-    // Window is full, wait for the oldest request to exit the sliding window
+    // Window is full, wait for the oldest request to exit 60s window
     const oldestTimestamp = requestTimestamps[0];
-    const waitTime = oldestTimestamp + windowMs - now + 50; // Add 50ms buffer
-    console.log(`[Gemini Queue] Rate limit reached. Queueing request... Waiting ${waitTime}ms`);
+    const waitTime = Math.max(100, oldestTimestamp + windowMs - now + 20);
+    console.log(`[Gemini Rate Limiter] 30 RPM limit reached. Queued request waiting ${waitTime}ms...`);
     await delay(waitTime);
   }
 }
 
 /**
- * Direct Gemini API call wrapper with retries and exponential backoff.
+ * Direct Gemini API call with fast exponential backoff retries on 429/503.
  */
 async function executeApiCallWithRetries(
   modelId: string,
@@ -124,9 +136,9 @@ async function executeApiCallWithRetries(
       errorMsg.includes("overloaded");
 
     if (isRateLimit && attempt <= 3) {
-      const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+      const waitTime = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s (fast retry)
       console.warn(
-        `[Gemini Retry] Rate limited or overloaded (Attempt ${attempt}/3). Retrying in ${waitTime}ms... Error: ${errorMsg}`,
+        `[Gemini Retry] Rate limited or overloaded (Attempt ${attempt}/3). Retrying in ${waitTime}ms...`,
       );
       await delay(waitTime);
       return executeApiCallWithRetries(modelId, systemInstruction, userPrompt, json, attempt + 1);
@@ -144,7 +156,7 @@ async function executeApiCallWithRetries(
 
 /**
  * Makes a single-turn Gemini API call and returns the text response.
- * Handles dev-only response caching and strict sliding-window rate limiting.
+ * Features fast concurrent dispatching, dev-only caching, and 30 RPM safety protection.
  */
 export async function callGemini(opts: GeminiCallOpts): Promise<string> {
   const modelId = opts.model ?? "gemma-4-31b-it";
@@ -152,35 +164,34 @@ export async function callGemini(opts: GeminiCallOpts): Promise<string> {
 
   // Check cache first (Dev safety check)
   if (responseCache.has(cacheKey)) {
-    console.log(`[Gemini Cache] Hit! Returning cached response for prompt.`);
+    console.log(`[Gemini Cache] Hit! Returning cached response instantly.`);
     return responseCache.get(cacheKey)!;
   }
 
-  // Enqueue the request to run sequentially through the rate limiter
-  return new Promise((resolve, reject) => {
-    queuePromise = queuePromise
-      .then(async () => {
-        await enforceRateLimit();
-        const systemInstruction = opts.system;
-        const userPrompt = opts.json
-          ? `${opts.user}\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no code fences, no prose.`
-          : opts.user;
-
-        const result = await executeApiCallWithRetries(
-          modelId,
-          systemInstruction,
-          userPrompt,
-          opts.json,
-        );
-
-        // Store in cache
-        responseCache.set(cacheKey, result);
-        resolve(result);
-      })
-      .catch((err) => {
-        reject(err);
-      });
+  // Fast dispatch clearance queue: only serializes acquiring permission, not the network call!
+  await new Promise<void>((resolve) => {
+    dispatchQueuePromise = dispatchQueuePromise.then(async () => {
+      await acquireDispatchPermission();
+      resolve();
+    });
   });
+
+  const systemInstruction = opts.system;
+  const userPrompt = opts.json
+    ? `${opts.user}\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no code fences, no prose.`
+    : opts.user;
+
+  // Execute API call concurrently
+  const result = await executeApiCallWithRetries(
+    modelId,
+    systemInstruction,
+    userPrompt,
+    opts.json,
+  );
+
+  // Store in cache
+  responseCache.set(cacheKey, result);
+  return result;
 }
 
 /**
